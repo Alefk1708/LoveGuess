@@ -1,6 +1,6 @@
-import { Text, View } from "react-native";
 import "./global.css";
+import Navigation from "./src/navigation";
 
 export default function App() {
-  return <View className=""></View>;
+  return <Navigation />;
 }
