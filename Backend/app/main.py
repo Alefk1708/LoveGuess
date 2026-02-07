@@ -123,5 +123,5 @@ async def websocket_endpoint(ws: WebSocket, room_code: str):
             await broadcast(room_code, {
                 "event": "player_left"
             })
-        else:
-            del rooms[room_code]
+        #else:
+            #del rooms[room_code]

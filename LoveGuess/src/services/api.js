@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://192.168.0.2:8000",
+  baseURL: "https://occupational-augustina-alefk1708-7733c2aa.koyeb.app",
 });
 
 export default api;

@@ -4,7 +4,7 @@ class SocketService {
 
   connect(roomCode) {
     this.ws = new WebSocket(
-      `ws://192.168.0.2:8000/ws/${roomCode}`
+      `ws://occupational-augustina-alefk1708-7733c2aa.koyeb.app/ws/${roomCode}`
     );
 
     this.ws.onmessage = (msg) => {

@@ -1,9 +1,4 @@
-import {
-  View,
-  ImageBackground,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
+import { View, ImageBackground, TouchableOpacity, Alert } from "react-native";
 import OutlinedText from "../../components/OutlinedText";
 import { useContext, useEffect, useState } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
@@ -18,10 +13,7 @@ export default function RoomScreen({ navigation, route }) {
   const [isReady, setIsReady] = useState(false);
 
   const copyCode = () => {
-    Alert.alert(
-      "Código copiado!",
-      "Compartilhe com o outro jogador."
-    );
+    Alert.alert("Código copiado!", "Compartilhe com o outro jogador.");
   };
 
   useEffect(() => {
@@ -48,6 +40,10 @@ export default function RoomScreen({ navigation, route }) {
       setIsReady(false);
     });
 
+    return () => {
+      socket.onmessage = null;
+      socket.disconnect();
+    };
   }, []);
 
   const startGame = () => {
@@ -62,9 +58,7 @@ export default function RoomScreen({ navigation, route }) {
     >
       {/* Header */}
       <View className="w-full h-[12vh] justify-center items-center">
-        <OutlinedText size={22}>
-          Sala: {roomCode}
-        </OutlinedText>
+        <OutlinedText size={22}>Sala: {roomCode}</OutlinedText>
 
         <TouchableOpacity
           onPress={copyCode}
@@ -94,14 +88,10 @@ export default function RoomScreen({ navigation, route }) {
       {/* Status */}
       <View className="w-full h-[45vh] justify-center items-center">
         <OutlinedText size={20}>
-          {isReady
-            ? "Jogador conectado!"
-            : "Aguardando jogador..."}
+          {isReady ? "Jogador conectado!" : "Aguardando jogador..."}
         </OutlinedText>
 
-        <OutlinedText size={40}>
-          {isReady ? "✅" : "⏳"}
-        </OutlinedText>
+        <OutlinedText size={40}>{isReady ? "✅" : "⏳"}</OutlinedText>
       </View>
 
       {/* Botão começar */}
