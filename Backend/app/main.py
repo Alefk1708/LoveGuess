@@ -35,8 +35,10 @@ def create_room():
 
 
 async def broadcast(room_code, message):
-    for ws in rooms[room_code]["players"]:
-        await ws.send_json(message)
+    # Verifica se a sala ainda existe antes de tentar enviar
+    if room_code in rooms:
+        for ws in rooms[room_code]["players"]:
+            await ws.send_json(message)
 
 
 def draw_characters(room):
@@ -45,12 +47,12 @@ def draw_characters(room):
         if c not in room["used_characters"]
     ]
 
+    # SE NÃO TIVER MAIS PARES DISPONÍVEIS, RETORNA NONE
+    # (Removemos a parte que limpava a lista automaticamente)
     if len(available) < 2:
-        room["used_characters"] = []
-        available = CHARACTERS.copy()
+        return None
 
     chosen = random.sample(available, 2)
-
     room["used_characters"].extend(chosen)
 
     return chosen
@@ -58,7 +60,6 @@ def draw_characters(room):
 
 @app.websocket("/ws/{room_code}")
 async def websocket_endpoint(ws: WebSocket, room_code: str):
-    print("deu")
     await ws.accept()
 
     if room_code not in rooms:
@@ -73,7 +74,6 @@ async def websocket_endpoint(ws: WebSocket, room_code: str):
         return
 
     room["players"].append(ws)
-    player_index = len(room["players"]) - 1
 
     await broadcast(room_code, {
         "event": "player_joined",
@@ -83,45 +83,47 @@ async def websocket_endpoint(ws: WebSocket, room_code: str):
     try:
         while True:
             data = await ws.receive_json()
-
             event = data.get("event")
 
-            # iniciar partida
-            if event == "start_game":
+            # Lógica unificada para start e restart
+            if event == "start_game" or event == "restart_game":
+                
+                # Se for start_game (primeira vez), garante que a lista está limpa
+                if event == "start_game":
+                    room["used_characters"] = []
+
                 chars = draw_characters(room)
 
-                room["characters"] = {
-                    0: chars[0],
-                    1: chars[1]
-                }
-
-                for idx, player_ws in enumerate(room["players"]):
-                    await player_ws.send_json({
-                        "event": "game_started",
-                        "character": room["characters"][idx]
+                # SE CHARS FOR NONE, O JOGO ACABOU
+                if chars is None:
+                    await broadcast(room_code, {
+                        "event": "game_over",
+                        "message": "Todos os personagens foram usados!"
                     })
+                else:
+                    # Segue o jogo normal
+                    room["characters"] = {
+                        0: chars[0],
+                        1: chars[1]
+                    }
+                    
+                    # Define qual evento enviar de volta
+                    response_event = "game_started" if event == "start_game" else "game_restarted"
 
-            # reiniciar partida
-            if event == "restart_game":
-                chars = draw_characters(room)
-
-                room["characters"] = {
-                    0: chars[0],
-                    1: chars[1]
-                }
-
-                for idx, player_ws in enumerate(room["players"]):
-                    await player_ws.send_json({
-                        "event": "game_restarted",
-                        "character": room["characters"][idx]
-                    })
+                    for idx, player_ws in enumerate(room["players"]):
+                        await player_ws.send_json({
+                            "event": response_event,
+                            "character": room["characters"][idx]
+                        })
 
     except WebSocketDisconnect:
-        room["players"].remove(ws)
+        if room_code in rooms:
+            if ws in room["players"]:
+                room["players"].remove(ws)
 
-        if room["players"]:
-            await broadcast(room_code, {
-                "event": "player_left"
-            })
-        #else:
-            #del rooms[room_code]
+            if room["players"]:
+                await broadcast(room_code, {
+                    "event": "player_left"
+                })
+            else:
+                del rooms[room_code]

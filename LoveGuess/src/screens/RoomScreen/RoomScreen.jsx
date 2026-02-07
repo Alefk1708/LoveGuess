@@ -39,11 +39,6 @@ export default function RoomScreen({ navigation, route }) {
       setPlayers(1);
       setIsReady(false);
     });
-
-    return () => {
-      socket.onmessage = null;
-      socket.disconnect();
-    };
   }, []);
 
   const startGame = () => {

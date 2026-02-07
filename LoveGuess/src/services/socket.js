@@ -3,15 +3,21 @@ class SocketService {
   listeners = {};
 
   connect(roomCode) {
+    if (this.ws) return; // evita reconectar
+
     this.ws = new WebSocket(
-      `ws://occupational-augustina-alefk1708-7733c2aa.koyeb.app/ws/${roomCode}`
+      `wss://occupational-augustina-alefk1708-7733c2aa.koyeb.app/ws/${roomCode}`
     );
 
     this.ws.onmessage = (msg) => {
       const data = JSON.parse(msg.data);
-
       const handler = this.listeners[data.event];
       if (handler) handler(data);
+    };
+
+    this.ws.onclose = () => {
+      console.log("socket closed");
+      this.ws = null;
     };
   }
 
@@ -20,13 +26,16 @@ class SocketService {
   }
 
   send(event, payload = {}) {
-    this.ws.send(
-      JSON.stringify({ event, ...payload })
-    );
+    if (!this.ws) return;
+
+    this.ws.send(JSON.stringify({ event, ...payload }));
   }
 
   disconnect() {
-    if (this.ws) this.ws.close();
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
   }
 }
 
