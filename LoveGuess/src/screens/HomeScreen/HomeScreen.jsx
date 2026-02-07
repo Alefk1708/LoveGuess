@@ -5,34 +5,33 @@ import {
   TouchableOpacity,
   Alert,
   BackHandler,
-  Animated, // Importado
+  Animated,
+  ActivityIndicator, // (Opcional) Se quiser um spinner
 } from "react-native";
-import { useContext, useEffect, useRef } from "react";
+import { useContext, useEffect, useRef, useState } from "react"; // <--- 1. Adicione useState
 import { ThemeContext } from "../../context/ThemeContext";
 import OutlinedText from "../../components/OutlinedText";
 import api from "../../services/api";
 
-// --- Componente de Botão Animado ---
-// Ele age exatamente como o TouchableOpacity, mas com superpoderes de animação
+// --- Componente de Botão Animado (Atualizado com suporte a DISABLED) ---
 const AnimButton = ({ 
   children, 
   onPress, 
   delay = 0, 
   style, 
+  disabled, // <--- Recebe disabled
   ...props 
 }) => {
-  // Valores da animação
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
-  const translateYAnim = useRef(new Animated.Value(30)).current; // Desliza 30px
+  const translateYAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    // Animação de Entrada (Fade In + Slide Up)
     Animated.sequence([
       Animated.delay(delay),
       Animated.parallel([
         Animated.timing(opacityAnim, {
-          toValue: 1,
+          toValue: disabled ? 0.6 : 1, // Se nascer desabilitado, nasce meio transparente
           duration: 600,
           useNativeDriver: true,
         }),
@@ -46,16 +45,25 @@ const AnimButton = ({
     ]).start();
   }, []);
 
-  // Efeito ao clicar (Diminuir)
+  // Monitora mudanças no disabled para mudar a opacidade em tempo real
+  useEffect(() => {
+    Animated.timing(opacityAnim, {
+      toValue: disabled ? 0.6 : 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [disabled]);
+
   const handlePressIn = () => {
+    if (disabled) return; // Não anima se desabilitado
     Animated.spring(scaleAnim, {
       toValue: 0.95,
       useNativeDriver: true,
     }).start();
   };
 
-  // Efeito ao soltar (Voltar ao normal)
   const handlePressOut = () => {
+    if (disabled) return;
     Animated.spring(scaleAnim, {
       toValue: 1,
       friction: 4,
@@ -76,8 +84,9 @@ const AnimButton = ({
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={style} // Aplica o estilo original do seu botão aqui dentro
-        {...props}    // Repassa className e outros props
+        disabled={disabled} // <--- Passa o disabled para o touchable
+        style={style}
+        {...props}
       >
         {children}
       </TouchableOpacity>
@@ -85,10 +94,10 @@ const AnimButton = ({
   );
 };
 
-// --- Componente para animar o Header (Imagem) ---
+// --- Header Animado ---
 const AnimHeader = ({ children, delay = 0 }) => {
   const opacityAnim = useRef(new Animated.Value(0)).current;
-  const translateYAnim = useRef(new Animated.Value(-30)).current; // Vem de cima
+  const translateYAnim = useRef(new Animated.Value(-30)).current;
 
   useEffect(() => {
     Animated.sequence([
@@ -109,14 +118,23 @@ const AnimHeader = ({ children, delay = 0 }) => {
 
 export default function HomeScreen({ navigation }) {
   const { theme } = useContext(ThemeContext);
+  const [isLoading, setIsLoading] = useState(false); // <--- 2. Estado de carregamento
 
   const createRoom = async () => {
+    if (isLoading) return; // Evita cliques duplos se já estiver carregando
+
+    setIsLoading(true); // Ativa o loading
+
     try {
       const response = await api.post("/room");
+      
       navigation.navigate("Room", {
         roomCode: response.data.roomCode,
       });
-    } catch {
+      // Importante: Tiramos o loading no finally ou após navegar
+      setIsLoading(false); 
+    } catch (error) {
+      setIsLoading(false); // Desativa loading se der erro
       Alert.alert("Erro ao criar sala", "Tente novamente mais tarde.");
     }
   };
@@ -148,10 +166,11 @@ export default function HomeScreen({ navigation }) {
       {/* Body */}
       <View className="w-full h-[55vh] justify-center items-center gap-[1.5vh]">
         
-        {/* Botão Nova Partida (Delay 100ms) */}
+        {/* Botão Nova Partida (Com Loading) */}
         <AnimButton
           delay={100}
           onPress={() => createRoom()}
+          disabled={isLoading} // <--- Desabilita o botão visualmente e funcionalmente
           style={{
             backgroundColor: theme.buttonBg,
             borderColor: theme.buttonBorderOuter,
@@ -164,26 +183,40 @@ export default function HomeScreen({ navigation }) {
             }}
             className="w-full h-full justify-center rounded-full items-center border-[0.7vw]"
           >
-            <OutlinedText
-              size={19}
-              color={theme.buttonText}
-              strokeColor={theme.buttonTextStroke}
-            >
-              Nova
-            </OutlinedText>
-            <OutlinedText
-              color={theme.buttonText}
-              strokeColor={theme.buttonTextStroke}
-              size={19}
-            >
-              Partida
-            </OutlinedText>
+            {/* Lógica do Texto: Se isLoading, mostra "Criando...", senão "Nova Partida" */}
+            {isLoading ? (
+              <OutlinedText
+                size={16}
+                color={theme.buttonText}
+                strokeColor={theme.buttonTextStroke}
+              >
+                Criando...
+              </OutlinedText>
+            ) : (
+              <>
+                <OutlinedText
+                  size={19}
+                  color={theme.buttonText}
+                  strokeColor={theme.buttonTextStroke}
+                >
+                  Nova
+                </OutlinedText>
+                <OutlinedText
+                  color={theme.buttonText}
+                  strokeColor={theme.buttonTextStroke}
+                  size={19}
+                >
+                  Partida
+                </OutlinedText>
+              </>
+            )}
           </View>
         </AnimButton>
 
-        {/* Botão Entrar (Delay 200ms) */}
+        {/* Botão Entrar */}
         <AnimButton
           delay={200}
+          disabled={isLoading} // Opcional: Bloqueia os outros botões enquanto carrega
           style={{
             backgroundColor: theme.buttonBg,
             borderColor: theme.buttonBorderOuter,
@@ -206,9 +239,10 @@ export default function HomeScreen({ navigation }) {
           </View>
         </AnimButton>
 
-        {/* Botão Configurações (Delay 300ms) */}
+        {/* Botão Configurações */}
         <AnimButton
           delay={300}
+          disabled={isLoading}
           style={{
             backgroundColor: theme.buttonBg,
             borderColor: theme.buttonBorderOuter,
@@ -231,7 +265,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         </AnimButton>
 
-        {/* Botão Sair (Delay 400ms) */}
+        {/* Botão Sair */}
         <AnimButton
           delay={400}
           onPress={() => exitApp()}

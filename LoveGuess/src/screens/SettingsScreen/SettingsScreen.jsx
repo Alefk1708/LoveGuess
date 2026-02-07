@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect, useRef } from "react";
 import {
   ImageBackground,
   ScrollView,
@@ -6,14 +6,15 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
-  Alert
+  Alert,
+  Animated, // Importado
 } from "react-native";
 import ColorPicker from "react-native-wheel-color-picker";
 
 import OutlinedText from "../../components/OutlinedText";
 import { ThemeContext } from "../../context/ThemeContext";
 
-// --- Configuração dos Campos ---
+// --- CONFIGURAÇÃO DOS CAMPOS ---
 const BUTTON_FIELDS = [
   { label: "Fundo do botão", key: "buttonBg" },
   { label: "Borda externa", key: "buttonBorderOuter" },
@@ -29,7 +30,70 @@ const CARD_FIELDS = [
   { label: "Borda do texto", key: "cardTextStroke" },
 ];
 
-// --- Sub-componente para o Input de Cor ---
+// --- 1. COMPONENTE DE SEÇÃO ANIMADA (Entrada em Cascata) ---
+const AnimSection = ({ children, delay = 0, style, className }) => {
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const translateYAnim = useRef(new Animated.Value(50)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(delay),
+      Animated.parallel([
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(translateYAnim, {
+          toValue: 0,
+          friction: 7,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[{ opacity: opacityAnim, transform: [{ translateY: translateYAnim }] }, style]}
+      className={className}
+    >
+      {children}
+    </Animated.View>
+  );
+};
+
+// --- 2. WRAPPER DE ANIMAÇÃO PARA O BOTÃO ---
+// Este componente NÃO define estilos visuais, apenas a animação de escala.
+// Ele envolve o botão original para não quebrar o layout.
+const AnimatedScaleWrapper = ({ children, onPress }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true }).start();
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        {children}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
+
+// --- 3. SUB-COMPONENTE PARA O INPUT DE COR ---
 const ColorInput = ({ label, colorKey, themeValues, onUpdate }) => (
   <View className="gap-2 w-full items-center mb-6">
     <OutlinedText size={13}>{label}</OutlinedText>
@@ -58,8 +122,7 @@ const ColorInput = ({ label, colorKey, themeValues, onUpdate }) => (
 );
 
 export default function SettingsScreen() {
-  // IMPORTANTE: Adicionei 'setTheme' aqui. Verifique se seu Context exporta isso.
-  const { theme, setTheme } = useContext(ThemeContext); 
+  const { theme, setTheme } = useContext(ThemeContext);
   const [tempTheme, setTempTheme] = useState(theme);
 
   function updateColor(field, value) {
@@ -75,16 +138,16 @@ export default function SettingsScreen() {
     }
   }
 
-  // Componente visual do Botão de Aplicar para evitar repetição
+  // --- Botão de Aplicar (Versão Original com Wrapper de Animação) ---
   const ApplyButton = () => (
-    <TouchableOpacity
-      onPress={handleApply}
-      className="mt-6 bg-[#2ecc71] py-3 px-8 rounded-xl border-2 border-white shadow-lg active:opacity-80"
-    >
-      <OutlinedText size={16} color="#FFF" strokeColor="#145A32">
-        APLICAR MUDANÇAS
-      </OutlinedText>
-    </TouchableOpacity>
+    <AnimatedScaleWrapper onPress={handleApply}>
+      {/* Esta View mantém EXATAMENTE o estilo original do seu botão */}
+      <View className="mt-6 bg-[#2ecc71] py-3 px-8 rounded-xl border-2 border-white shadow-lg">
+        <OutlinedText size={16} color="#FFF" strokeColor="#145A32">
+          APLICAR MUDANÇAS
+        </OutlinedText>
+      </View>
+    </AnimatedScaleWrapper>
   );
 
   return (
@@ -95,12 +158,18 @@ export default function SettingsScreen() {
     >
       <ScrollView contentContainerStyle={{ paddingVertical: 40, alignItems: "center" }}>
         
-        <OutlinedText size={22}>Personalização</OutlinedText>
+        {/* Título Animado */}
+        <AnimSection delay={0}>
+          <OutlinedText size={22}>Personalização</OutlinedText>
+        </AnimSection>
 
         {/* --- SEÇÃO BOTÕES --- */}
-        <View className="w-[90vw] mt-6 bg-black/40 rounded-3xl p-6 items-center border border-white/20">
+        <AnimSection 
+          delay={200} 
+          className="w-[90vw] mt-6 bg-black/40 rounded-3xl p-6 items-center border border-white/20"
+        >
           <OutlinedText size={18}>Botões</OutlinedText>
-          
+
           <View className="mt-6 w-full gap-[4vh]">
             {BUTTON_FIELDS.map((field) => (
               <ColorInput
@@ -116,38 +185,41 @@ export default function SettingsScreen() {
           {/* Preview Botão */}
           <View className="mt-[4vh] mb-2 items-center w-full">
             <OutlinedText size={14}>Preview:</OutlinedText>
-            
+
             <View className="p-4 bg-white/10 rounded-xl mt-2 mb-2 w-full items-center border border-white/5">
-                <TouchableOpacity
+              <TouchableOpacity
                 className="w-[45vw] h-[50px] rounded-[25px] border-[3px] justify-center items-center"
                 style={{
-                    backgroundColor: tempTheme.buttonBg,
-                    borderColor: tempTheme.buttonBorderOuter,
+                  backgroundColor: tempTheme.buttonBg,
+                  borderColor: tempTheme.buttonBorderOuter,
                 }}
-                >
+              >
                 <View
-                    className="w-full h-full rounded-[22px] border-[3px] justify-center items-center"
-                    style={{
+                  className="w-full h-full rounded-[22px] border-[3px] justify-center items-center"
+                  style={{
                     borderColor: tempTheme.buttonBorderInner,
-                    }}
+                  }}
                 >
-                    <OutlinedText
+                  <OutlinedText
                     color={tempTheme.buttonText}
                     strokeColor={tempTheme.buttonTextStroke}
-                    >
+                  >
                     Botão Exemplo
-                    </OutlinedText>
+                  </OutlinedText>
                 </View>
-                </TouchableOpacity>
+              </TouchableOpacity>
             </View>
 
-            {/* BOTÃO DE APLICAR (Botões) */}
+            {/* BOTÃO DE APLICAR */}
             <ApplyButton />
           </View>
-        </View>
+        </AnimSection>
 
         {/* --- SEÇÃO CARTAS --- */}
-        <View className="w-[90vw] mt-8 bg-black/40 rounded-3xl p-6 items-center border border-white/20">
+        <AnimSection 
+          delay={400} 
+          className="w-[90vw] mt-8 bg-black/40 rounded-3xl p-6 items-center border border-white/20"
+        >
           <OutlinedText size={18}>Cartas</OutlinedText>
 
           <View className="mt-6 w-full gap-[4vh]">
@@ -164,39 +236,39 @@ export default function SettingsScreen() {
 
           {/* Preview Carta */}
           <View className="mt-[4vh] mb-2 items-center w-full">
-             <OutlinedText size={14}>Preview:</OutlinedText>
-             
-             <View className="p-4 bg-white/10 rounded-xl mt-2 mb-2 w-full items-center border border-white/5">
-                <TouchableOpacity className="w-[26vw]">
+            <OutlinedText size={14}>Preview:</OutlinedText>
+
+            <View className="p-4 bg-white/10 rounded-xl mt-2 mb-2 w-full items-center border border-white/5">
+              <TouchableOpacity className="w-[26vw]">
                 <View
-                    className="rounded-lg overflow-hidden border-2"
-                    style={{
+                  className="rounded-lg overflow-hidden border-2"
+                  style={{
                     borderColor: tempTheme.cardBorder,
                     backgroundColor: tempTheme.cardBg,
-                    }}
+                  }}
                 >
-                    <Image
+                  <Image
                     source={require("../../../assets/cards/1.png")}
                     className="w-full h-[60px]"
                     resizeMode="contain"
-                    />
-                    <View className="items-center py-1">
+                  />
+                  <View className="items-center py-1">
                     <OutlinedText
-                        size={13}
-                        color={tempTheme.cardText}
-                        strokeColor={tempTheme.cardTextStroke}
+                      size={13}
+                      color={tempTheme.cardText}
+                      strokeColor={tempTheme.cardTextStroke}
                     >
-                        Hello Kitty
+                      Hello Kitty
                     </OutlinedText>
-                    </View>
+                  </View>
                 </View>
-                </TouchableOpacity>
-             </View>
+              </TouchableOpacity>
+            </View>
 
-             {/* BOTÃO DE APLICAR (Cartas) */}
-             <ApplyButton />
+            {/* BOTÃO DE APLICAR */}
+            <ApplyButton />
           </View>
-        </View>
+        </AnimSection>
 
         <View className="h-[6vh]" />
       </ScrollView>

@@ -205,7 +205,7 @@ export default function RoomScreen({ navigation, route }) {
             borderColor: theme.buttonBorderOuter,
             marginTop: 10,
             borderRadius: 999,
-            borderWidth: 3 // ~0.4vw
+            borderWidth: 3, // ~0.4vw
           }}
         >
           <View
