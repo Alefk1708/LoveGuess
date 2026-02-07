@@ -20,7 +20,7 @@ export default function OutlinedText({
   ];
 
   return (
-    <View style={{ position: "relative", alignItems: "center" }}>
+    <View style={{ position: "relative", alignItems: "center", justifyContent: "center" }}>
       {directions.map(([x, y], i) => (
         <Text
           key={i}
