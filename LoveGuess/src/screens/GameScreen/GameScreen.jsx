@@ -4,8 +4,10 @@ import {
   ImageBackground,
   TouchableOpacity,
   FlatList,
+  Alert,
+  Animated, // Importado
 } from "react-native";
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import OutlinedText from "../../components/OutlinedText";
 import { ThemeContext } from "../../context/ThemeContext";
 import socket from "../../services/socket";
@@ -33,7 +35,92 @@ export const mockCharacters = [
   { id: "20", name: "Bonbonribbon", image: require("../../../assets/cards/20.png"), eliminated: false },
 ];
 
-export default function GameScreen({ route }) {
+// --- NOVO COMPONENTE: Carta que Vira (FlipCard) ---
+const FlipCard = ({ item, onPress, theme }) => {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+
+  // Monitora se a carta está "eliminada" e dispara a animação
+  useEffect(() => {
+    Animated.spring(animatedValue, {
+      toValue: item.eliminated ? 180 : 0, // Se eliminada, gira 180 graus
+      friction: 8,
+      tension: 10,
+      useNativeDriver: true,
+    }).start();
+  }, [item.eliminated]);
+
+  // Interpolação para a FRENTE (0 a 180 graus)
+  const frontInterpolate = animatedValue.interpolate({
+    inputRange: [0, 180],
+    outputRange: ["0deg", "180deg"],
+  });
+
+  // Interpolação para o VERSO (180 a 360 graus)
+  const backInterpolate = animatedValue.interpolate({
+    inputRange: [0, 180],
+    outputRange: ["180deg", "360deg"],
+  });
+
+  // Estilo base para os dois lados da carta
+  const cardStyle = {
+    backgroundColor: theme.cardBg,
+    borderColor: theme.cardBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    width: "100%",
+    height: "100%", // Ocupa todo o espaço do container
+    justifyContent: "center",
+    alignItems: "center",
+    backfaceVisibility: "hidden", // Segredo do efeito 3D: esconde o verso
+  };
+
+  return (
+    <TouchableOpacity onPress={onPress} className="flex-1 m-[0.5vw] h-[11vh]">
+      <View className="flex-1 relative">
+        {/* Lado da FRENTE (Personagem Ativo) */}
+        <Animated.View
+          style={[
+            cardStyle,
+            { position: "absolute", zIndex: 1, transform: [{ rotateY: frontInterpolate }] },
+          ]}
+        >
+          <Image source={item.image} className="w-full h-[7vh]" resizeMode="contain" />
+          <View className="items-center py-[0.3vh]">
+            <OutlinedText size={11}>{item.name}</OutlinedText>
+          </View>
+        </Animated.View>
+
+        {/* Lado de TRÁS (Eliminado / Verso da Carta) */}
+        <Animated.View
+          style={[
+            cardStyle,
+            { 
+              // Estilo específico do verso (Escuro ou imagem de fundo de carta)
+              backgroundColor: "#333", 
+              position: "absolute", 
+              zIndex: 0, 
+              transform: [{ rotateY: backInterpolate }] 
+            },
+          ]}
+        >
+          {/* Aqui você poderia colocar uma imagem de "verso de baralho" */}
+          {/* Como não temos, usamos a imagem escurecida como efeito */}
+          <Image 
+            source={item.image} 
+            className="w-full h-[7vh] opacity-30" 
+            resizeMode="contain" 
+            style={{ tintColor: 'gray' }} 
+          />
+           <View className="absolute">
+             <OutlinedText size={30} color="#FF0000">❌</OutlinedText>
+           </View>
+        </Animated.View>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+export default function GameScreen({ route, navigation }) {
   const { theme } = useContext(ThemeContext);
   const { character, roomCode } = route.params;
 
@@ -41,17 +128,13 @@ export default function GameScreen({ route }) {
   const [myCharacter, setMyCharacter] = useState(character);
 
   function toggleCard(id) {
-    setCharacters(prev =>
-      prev.map(c =>
-        c.id === id ? { ...c, eliminated: !c.eliminated } : c
-      )
+    setCharacters((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, eliminated: !c.eliminated } : c))
     );
   }
 
   function resetBoardLocal() {
-    setCharacters(prev =>
-      prev.map(c => ({ ...c, eliminated: false }))
-    );
+    setCharacters((prev) => prev.map((c) => ({ ...c, eliminated: false })));
   }
 
   function restartGame() {
@@ -59,53 +142,39 @@ export default function GameScreen({ route }) {
   }
 
   useEffect(() => {
-  const onRestarted = data => {
-    setMyCharacter(data.character);
-    resetBoardLocal();
-  };
+    const onRestarted = (data) => {
+      setMyCharacter(data.character);
+      resetBoardLocal();
+    };
 
-  socket.on("game_restarted", onRestarted);
+    const onGameOver = (data) => {
+      Alert.alert(
+        "Fim de Jogo!",
+        data.message || "Todos os personagens já foram usados.",
+        [{ text: "Voltar ao Início", onPress: () => navigation.popToTop() }],
+        { cancelable: false }
+      );
+    };
 
-  return () => {
-    socket.onmessage = null;
-    socket.disconnect();
-  };
-}, []);
+    socket.on("game_restarted", onRestarted);
+    socket.on("game_over", onGameOver);
 
-  const myCardData = mockCharacters.find(
-    c => c.name === myCharacter
-  );
+    return () => {
+      socket.onmessage = null;
+      socket.disconnect();
+    };
+  }, []);
 
+  const myCardData = mockCharacters.find((c) => c.name === myCharacter);
+
+  // RenderItem agora usa o componente separado FlipCard
   function renderItem({ item }) {
     return (
-      <TouchableOpacity
-        onPress={() => toggleCard(item.id)}
-        className="flex-1 m-[0.5vw]"
-      >
-        <View
-          style={{
-            backgroundColor: theme.cardBg,
-            borderColor: theme.cardBorder,
-          }}
-          className="relative rounded-lg overflow-hidden border"
-        >
-          <Image
-            source={item.image}
-            className="w-full h-[8vh]"
-            resizeMode="contain"
-          />
-
-          {item.eliminated && (
-            <View className="absolute w-full h-full bg-black opacity-60" />
-          )}
-
-          <View className="items-center py-[0.3vh]">
-            <OutlinedText size={13}>
-              {item.name}
-            </OutlinedText>
-          </View>
-        </View>
-      </TouchableOpacity>
+      <FlipCard 
+        item={item} 
+        onPress={() => toggleCard(item.id)} 
+        theme={theme} 
+      />
     );
   }
 
@@ -118,9 +187,7 @@ export default function GameScreen({ route }) {
       <View className="flex-1 pt-[5vh] pb-[6vh]">
         {/* Personagem secreto */}
         <View className="items-center mb-[3vh]">
-          <OutlinedText size={25}>
-            Seu personagem
-          </OutlinedText>
+          <OutlinedText size={25}>Seu personagem</OutlinedText>
 
           {myCardData && (
             <View className="flex-row items-center gap-[3vw] mt-[0.5vh]">
@@ -129,9 +196,7 @@ export default function GameScreen({ route }) {
                 className="w-[16vw] h-[16vw]"
                 resizeMode="contain"
               />
-              <OutlinedText size={19}>
-                {myCardData.name}
-              </OutlinedText>
+              <OutlinedText size={19}>{myCardData.name}</OutlinedText>
             </View>
           )}
         </View>
@@ -141,9 +206,12 @@ export default function GameScreen({ route }) {
           <FlatList
             data={characters}
             renderItem={renderItem}
-            keyExtractor={item => item.id}
+            keyExtractor={(item) => item.id}
             numColumns={4}
-            scrollEnabled={false}
+            // Removemos o scrollEnabled={false} se a lista for grande,
+            // mas mantemos se couber na tela.
+            scrollEnabled={true} 
+            showsVerticalScrollIndicator={false}
           />
         </View>
 

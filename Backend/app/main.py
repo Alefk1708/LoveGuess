@@ -11,7 +11,6 @@ CHARACTERS = [
     "Keroppi", "Chococat", "Pochacco", "Tuxedosam",
     "Hangyodon", "Gudetama", "Aggretsuko", "Kiki",
     "Lala", "Pekkle", "Wish Me Mell", "Bonbonribbon",
-    "Cogimyun", "Ruby", "Shirousa", "Kurousa"
 ]
 
 rooms = {}
