@@ -4,25 +4,24 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Animated, // Importado
+  Animated,
 } from "react-native";
 import { useContext, useState, useEffect, useRef } from "react";
 import OutlinedText from "../../components/OutlinedText";
 import { ThemeContext } from "../../context/ThemeContext";
 
-// --- Componente de Botão Animado (Com suporte a Disabled) ---
 const AnimButton = ({ children, onPress, delay = 0, style, disabled, ...props }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(30)).current;
 
-  // Animação de Entrada
+
   useEffect(() => {
     Animated.sequence([
       Animated.delay(delay),
       Animated.parallel([
         Animated.timing(opacityAnim, {
-          toValue: disabled ? 0.6 : 1, // Se nascer desabilitado, usa 0.6
+          toValue: disabled ? 0.6 : 1,
           duration: 600,
           useNativeDriver: true,
         }),
@@ -36,7 +35,6 @@ const AnimButton = ({ children, onPress, delay = 0, style, disabled, ...props })
     ]).start();
   }, []);
 
-  // Monitora se habilitou/desabilitou para mudar a opacidade visualmente
   useEffect(() => {
     Animated.timing(opacityAnim, {
       toValue: disabled ? 0.6 : 1,
@@ -77,7 +75,6 @@ const AnimButton = ({ children, onPress, delay = 0, style, disabled, ...props })
   );
 };
 
-// --- Header Animado ---
 const AnimHeader = ({ children, delay = 0 }) => {
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(-30)).current;
@@ -99,7 +96,6 @@ const AnimHeader = ({ children, delay = 0 }) => {
   );
 };
 
-// --- Input Animado (Efeito Pop) ---
 const AnimInput = ({ children, delay = 0 }) => {
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -181,7 +177,7 @@ export default function JoinRoomScreen({ navigation }) {
             style={{
               backgroundColor: theme.buttonBg,
               borderColor: theme.buttonBorderOuter,
-              marginTop: 20, // margin-top-[2vh]
+              marginTop: 20,
             }}
             className="w-[45vw] h-[6vh] rounded-[6vw] border-[0.4vw]"
           >

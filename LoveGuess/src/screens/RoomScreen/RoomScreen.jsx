@@ -3,21 +3,20 @@ import {
   ImageBackground,
   TouchableOpacity,
   Alert,
-  Animated, // Importado
-  Easing,   // Importado
+  Animated,
+  Easing, 
 } from "react-native";
 import OutlinedText from "../../components/OutlinedText";
 import { useContext, useEffect, useState, useRef } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
 import socket from "../../services/socket";
 
-// --- 1. Botão Animado (Igual da Home) ---
 const AnimButton = ({ 
   children, 
   onPress, 
   delay = 0, 
   style, 
-  disabled, // Recebe disabled para tratar opacidade
+  disabled, 
   ...props 
 }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -29,7 +28,7 @@ const AnimButton = ({
       Animated.delay(delay),
       Animated.parallel([
         Animated.timing(opacityAnim, {
-          toValue: disabled ? 0.6 : 1, // Se desabilitado, nasce transparente
+          toValue: disabled ? 0.6 : 1,
           duration: 600,
           useNativeDriver: true,
         }),
@@ -43,7 +42,7 @@ const AnimButton = ({
     ]).start();
   }, []);
 
-  // Atualiza opacidade se o status disabled mudar
+ 
   useEffect(() => {
     Animated.timing(opacityAnim, {
       toValue: disabled ? 0.6 : 1,
@@ -84,39 +83,37 @@ const AnimButton = ({
   );
 };
 
-// --- 2. Componente de Status (Ampulheta Girando / Check Pulando) ---
 const AnimatedStatus = ({ isReady }) => {
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0)).current; // Começa pequeno (pop effect)
 
   useEffect(() => {
     if (!isReady) {
-      // Configuração da Ampulheta: Loop Infinito de Rotação
-      scaleAnim.setValue(1); // Tamanho normal
+     
+      scaleAnim.setValue(1); 
       Animated.loop(
         Animated.timing(rotateAnim, {
           toValue: 1,
-          duration: 2000, // 2 segundos por volta
+          duration: 2000, 
           easing: Easing.linear,
           useNativeDriver: true,
         })
       ).start();
     } else {
-      // Configuração do Check: Para rotação e faz efeito "Pop"
+
       rotateAnim.stopAnimation();
-      rotateAnim.setValue(0); // Reseta rotação
+      rotateAnim.setValue(0); 
       
-      scaleAnim.setValue(0); // Reseta tamanho para explodir
+      scaleAnim.setValue(0); 
       Animated.spring(scaleAnim, {
         toValue: 1,
         friction: 5,
-        tension: 100, // Bastante tensão para "pular"
+        tension: 100, 
         useNativeDriver: true,
       }).start();
     }
   }, [isReady]);
 
-  // Interpolação para transformar 0->1 em 0deg->360deg
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ["0deg", "360deg"],
@@ -174,8 +171,6 @@ export default function RoomScreen({ navigation, route }) {
       setIsReady(false);
     });
     
-    // Cleanup do socket: removido o disconnect() aqui como combinado antes
-    // para não quebrar a navegação para o jogo
     return () => {
        socket.onmessage = null;
     }
@@ -205,7 +200,7 @@ export default function RoomScreen({ navigation, route }) {
             borderColor: theme.buttonBorderOuter,
             marginTop: 10,
             borderRadius: 999,
-            borderWidth: 3, // ~0.4vw
+            borderWidth: 3,
           }}
         >
           <View
@@ -248,16 +243,16 @@ export default function RoomScreen({ navigation, route }) {
           style={{
             backgroundColor: theme.buttonBg,
             borderColor: theme.buttonBorderOuter,
-            borderWidth: 3, // ~0.4vw
-            borderRadius: 30, // ~6vw
-            width: "60%", // 60vw
-            height: 50,   // ~6vh
+            borderWidth: 3, 
+            borderRadius: 30, 
+            width: "60%",
+            height: 50,
           }}
         >
           <View
             style={{
               borderColor: theme.buttonBorderInner,
-              borderWidth: 3, // ~0.4vw
+              borderWidth: 3,
               borderRadius: 30,
               width: "100%",
               height: "100%"

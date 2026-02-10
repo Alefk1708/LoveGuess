@@ -35,43 +35,38 @@ export const mockCharacters = [
   { id: "20", name: "Bonbonribbon", image: require("../../../assets/cards/20.png"), eliminated: false },
 ];
 
-// --- NOVO COMPONENTE: Carta que Vira (FlipCard) ---
 const FlipCard = ({ item, onPress, theme }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
 
-  // Monitora se a carta está "eliminada" e dispara a animação
   useEffect(() => {
     Animated.spring(animatedValue, {
-      toValue: item.eliminated ? 180 : 0, // Se eliminada, gira 180 graus
+      toValue: item.eliminated ? 180 : 0,
       friction: 8,
       tension: 10,
       useNativeDriver: true,
     }).start();
   }, [item.eliminated]);
 
-  // Interpolação para a FRENTE (0 a 180 graus)
   const frontInterpolate = animatedValue.interpolate({
     inputRange: [0, 180],
     outputRange: ["0deg", "180deg"],
   });
 
-  // Interpolação para o VERSO (180 a 360 graus)
   const backInterpolate = animatedValue.interpolate({
     inputRange: [0, 180],
     outputRange: ["180deg", "360deg"],
   });
 
-  // Estilo base para os dois lados da carta
   const cardStyle = {
     backgroundColor: theme.cardBg,
     borderColor: theme.cardBorder,
     borderRadius: 8,
     borderWidth: 1,
     width: "100%",
-    height: "100%", // Ocupa todo o espaço do container
+    height: "100%", 
     justifyContent: "center",
     alignItems: "center",
-    backfaceVisibility: "hidden", // Segredo do efeito 3D: esconde o verso
+    backfaceVisibility: "hidden",
   };
 
   return (
@@ -90,12 +85,11 @@ const FlipCard = ({ item, onPress, theme }) => {
           </View>
         </Animated.View>
 
-        {/* Lado de TRÁS (Eliminado / Verso da Carta) */}
+        {/* Lado de tras (Eliminado / Verso da Carta) */}
         <Animated.View
           style={[
             cardStyle,
             { 
-              // Estilo específico do verso (Escuro ou imagem de fundo de carta)
               backgroundColor: "#333", 
               position: "absolute", 
               zIndex: 0, 
@@ -208,8 +202,6 @@ export default function GameScreen({ route, navigation }) {
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
             numColumns={4}
-            // Removemos o scrollEnabled={false} se a lista for grande,
-            // mas mantemos se couber na tela.
             scrollEnabled={true} 
             showsVerticalScrollIndicator={false}
           />

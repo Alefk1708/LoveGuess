@@ -28,9 +28,14 @@ export function ThemeProvider({ children }) {
     );
   }
 
+  async function resetTheme() {
+    setTheme(defaultTheme);
+    await AsyncStorage.setItem("APP_THEME", JSON.stringify(defaultTheme));
+  }
+
   return (
     <ThemeContext.Provider
-      value={{ theme, setTheme: updateTheme }}
+      value={{ theme, setTheme: updateTheme, resetTheme }}
     >
       {children}
     </ThemeContext.Provider>
