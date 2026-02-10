@@ -208,10 +208,8 @@ export default function RoomScreen({ navigation, route }) {
               borderColor: theme.buttonBorderInner,
               borderWidth: 3,
               borderRadius: 999,
-              paddingHorizontal: 20,
-              paddingVertical: 8
             }}
-            className="justify-center items-center"
+            className=" w-[30vw] h-[4vh] justify-center items-center"
           >
             <OutlinedText
               color={theme.buttonText}
@@ -254,10 +252,8 @@ export default function RoomScreen({ navigation, route }) {
               borderColor: theme.buttonBorderInner,
               borderWidth: 3,
               borderRadius: 30,
-              width: "100%",
-              height: "100%"
             }}
-            className="justify-center items-center"
+            className=" w-full h-full justify-center items-center"
           >
             <OutlinedText
               color={theme.buttonText}
